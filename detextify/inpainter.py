@@ -2,7 +2,6 @@
 import io
 import math
 import openai
-import replicate
 import requests
 import tempfile
 import torch
@@ -120,30 +119,6 @@ class StableDiffusionInpainter(Inpainter):
 
     out_image.save(out_image_path)
 
-
-class ReplicateSDInpainter(StableDiffusionInpainter):
-  SD_INPAINTING_V2 = "cjwbw/stable-diffusion-v2-inpainting"
-  SD_INPAINTING_V2_VERSION = "f9bb0632bfdceb83196e85521b9b55895f8ff3d1d3b487fd1973210c0eb30bec"
-
-  def __init__(self, replicate_token: str, model_name=SD_INPAINTING_V2, model_version=SD_INPAINTING_V2_VERSION):
-    replicate_client = replicate.Client(api_token=replicate_token)
-    self.model = replicate_client.models.get(model_name).versions.get(model_version)
-
-  def call_model(self, prompt: str, image: Image, mask: Image) -> Image:
-    # Replicate expects a file object as an input.
-    img_temp_file = tempfile.NamedTemporaryFile(suffix=".jpeg")
-    image.save(img_temp_file)
-    mask_temp_file = tempfile.NamedTemporaryFile(suffix=".jpeg")
-    mask.save(mask_temp_file)
-
-    url = self.model.predict(prompt=prompt,
-                             prompt_strength=1.0,
-                             image=open(img_temp_file.name, "rb"),
-                             mask=open(mask_temp_file.name, "rb"),
-                             num_outputs=1)[0]
-    out_image_data = requests.get(url).content
-    out_image = Image.open(io.BytesIO(out_image_data))
-    return out_image
 
 
 class LocalSDInpainter(StableDiffusionInpainter):
