@@ -22,42 +22,6 @@ class Inpainter:
   def inpaint(self, in_image_path: str, text_boxes: Sequence[TextBox], prompt: str, out_image_path: str):
     pass
 
-
-class DalleInpainter(Inpainter):
-  """In-painting model that calls the DALL-E API."""
-
-  def __init__(self, openai_key: str):
-    openai.api_key = openai_key
-
-  @staticmethod
-  def _make_mask(text_boxes: Sequence[TextBox], height: int, width: int) -> bytes:
-    """Returns an .png where the text boxes are transparent."""
-    mask = Image.new("RGBA", (width, height), (0, 0, 0, 1))  # fully opaque
-    mask_draw = ImageDraw.Draw(mask)
-    for text_box in text_boxes:
-      mask_draw.rectangle(xy=(text_box.x, text_box.y, text_box.x + text_box.h, text_box.y + text_box.w),
-                          fill=(0, 0, 0, 0))  # fully transparent
-    # Convert mask to bytes.
-    bytes_arr = io.BytesIO()
-    mask.save(bytes_arr, format="PNG")
-    return bytes_arr.getvalue()
-
-  def inpaint(self, in_image_path: str, text_boxes: Sequence[TextBox], prompt: str, out_image_path: str):
-    image = Image.open(in_image_path)  # open the image to inspect its size
-
-    response = openai.Image.create_edit(
-        image=open(in_image_path, "rb"),
-        mask=self._make_mask(text_boxes, image.height, image.width),
-        prompt=prompt,
-        n=1,
-        size=f"{image.height}x{image.width}"
-    )
-    url = response['data'][0]['url']
-    out_image_data = requests.get(url).content
-    out_image = Image.open(io.BytesIO(out_image_data))
-    out_image.save(out_image_path)
-
-
 class StableDiffusionInpainter(Inpainter):
   """Abstract class for Stable Diffusion inpainters; suppoerts any input image size. Children must implement `call_model`."""
 
